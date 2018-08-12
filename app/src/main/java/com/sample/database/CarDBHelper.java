@@ -47,11 +47,13 @@ public class CarDBHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        // TODO Auto-generated method stub
-        db.execSQL(
-                "create table cars " +
-                        "(id integer primary key, name text, color text, mileage real)"
-        );
+
+        int nbTable = 20;
+        for (int i = 0; i < nbTable; i++) {
+            db.execSQL("create table test_"+i+"(id integer primary key, name text, color text, mileage real)");
+        }
+
+        db.execSQL("create table cars (id integer primary key, name text, color text, mileage real)");
 
         db.execSQL("create table [transaction] (id integer primary key, name text)");
 

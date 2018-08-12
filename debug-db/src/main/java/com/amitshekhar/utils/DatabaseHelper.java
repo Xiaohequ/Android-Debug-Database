@@ -20,16 +20,15 @@
 package com.amitshekhar.utils;
 
 import android.content.ContentValues;
-
-import net.sqlcipher.Cursor;
-import net.sqlcipher.database.SQLiteDatabase;
 import android.text.TextUtils;
-import android.util.Log;
 
 import com.amitshekhar.model.Response;
 import com.amitshekhar.model.RowDataRequest;
 import com.amitshekhar.model.TableDataResponse;
 import com.amitshekhar.model.UpdateRowResponse;
+
+import net.sqlcipher.Cursor;
+import net.sqlcipher.database.SQLiteDatabase;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -68,21 +67,20 @@ public class DatabaseHelper {
 
         TableDataResponse tableData = new TableDataResponse();
         tableData.isSelectQuery = true;
+        //get table name in query
         if (tableName == null) {
             tableName = getTableName(selectQuery);
         }
 
-        final String quotedTableName = getQuotedTableName(tableName);
+        //get table info
+        final String pragmaQuery = "PRAGMA table_info(" + tableName + ")";
+        tableData.tableInfos = getTableInfo(db, pragmaQuery);
 
-        if (tableName != null) {
-            final String pragmaQuery = "PRAGMA table_info(" + quotedTableName + ")";
-            tableData.tableInfos = getTableInfo(db, pragmaQuery);
-        }
+        //check if table is a "view"
         Cursor cursor = null;
         boolean isView = false;
         try {
-            cursor = db.rawQuery("SELECT type FROM sqlite_master WHERE name=?",
-                    new String[]{quotedTableName});
+            cursor = db.rawQuery("SELECT type FROM sqlite_master WHERE name=?", new String[]{tableName});
             if (cursor.moveToFirst()) {
                 isView = "view".equalsIgnoreCase(cursor.getString(0));
             }
@@ -95,11 +93,12 @@ public class DatabaseHelper {
         }
         tableData.isEditable = tableName != null && tableData.tableInfos != null && !isView;
 
-
+/*
         if (!TextUtils.isEmpty(tableName)) {
             selectQuery = selectQuery.replace(tableName, quotedTableName);
-        }
+        }*/
 
+        //execute query
         try {
             cursor = db.rawQuery(selectQuery, null);
         } catch (Exception e) {
@@ -109,6 +108,7 @@ public class DatabaseHelper {
             return tableData;
         }
 
+        //mapping result data
         if (cursor != null) {
             cursor.moveToFirst();
 
@@ -124,10 +124,10 @@ public class DatabaseHelper {
                 }
             }
 
+            //get result data
             tableData.isSuccessful = true;
             tableData.rows = new ArrayList<>();
             if (cursor.getCount() > 0) {
-
                 do {
                     List<TableDataResponse.ColumnData> row = new ArrayList<>();
                     for (int i = 0; i < cursor.getColumnCount(); i++) {
