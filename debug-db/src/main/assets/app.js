@@ -107,6 +107,8 @@ function openDatabaseAndGetTableList(db) {
 
            result = JSON.parse(result);
            var tableList = result.rows;
+           tableList.sort(); //sort by table name
+
            var dbVersion = result.dbVersion;
            if("APP_SHARED_PREFERENCES" != db) {
               $("#selected-db-info").text("Export Selected Database : "+db +" Version : "+dbVersion);
