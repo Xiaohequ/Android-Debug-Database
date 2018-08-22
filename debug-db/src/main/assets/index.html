@@ -32,7 +32,6 @@
     <script src="dataTables.buttons.min.js"></script>
     <script src="dataTables.select.min.js"></script>
     <script src="dataTables.responsive.min.js"></script>
-    <script type="text/javascript" src="angular.1.7.2.min.js"></script>
 
     <link href="bootstrap.min.css" rel="stylesheet">
     <link href="custom.css" rel="stylesheet">
@@ -56,10 +55,57 @@
             overflow: hidden auto;
         }
 
-        .overflow-hidden{
+        html, body, .overflow-hidden{
             overflow: hidden;
         }
 
+        .flex-container{
+            display: flex;
+        }
+
+        .flex-child{
+            display: inline-flex;
+        }
+
+        .flex-column{
+            flex-direction: column;
+        }
+
+        /* scroll bar style */
+
+        .nice-scrollbar::-webkit-scrollbar {
+            width: 5px;
+            background-color: #F5F5F5;
+        }
+
+        .nice-scrollbar::-webkit-scrollbar-track {
+            background-color: #F5F5F5;
+        }
+
+        .nice-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #ccc;
+            border: 1px solid transparent;
+            border-radius: 10px;
+        }
+
+        .nice-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #555; 
+        }
+
+        .shadow{
+            -webkit-box-shadow: 0px 5px 23px -4px rgba(0,0,0,0.35);
+            -moz-box-shadow: 0px 5px 23px -4px rgba(0,0,0,0.35);
+            box-shadow: 0px 5px 23px -4px rgba(0,0,0,0.35);
+        }
+
+        .padding-2{
+            padding: 12px;
+        }
+
+        .margin-y-2{
+            margin-top: 12px;
+            margin-bottom: 12px;
+        }
     </style>
 </head>
 <body>
@@ -129,41 +175,45 @@
         <!-- /.container -->
     </nav>
 
-    <div class="padding-fifty H100" style="padding: 20px">
-        <div class="row padding-twenty H100 overflow-hidden">
+    <div class="H100 flex-container flex-column" style="padding: 65px 12px 12px 12px;">
+        <!-- header -->
+        <div class="row flex-child">
+            <div class="col-sm-2 ">
+                <div class="panel panel-info "><div class="panel-heading">Databases</div></div>
+            </div>
+            <div class="col-sm-2 ">
+                <div class="panel panel-info"><div class="panel-heading">Tables</div></div>
+            </div>
+            <div class="col-sm-8 ">
+                <div class="panel panel-info"><div class="panel-heading">Databases</div></div>
+            </div>
+        </div>
 
-            <div class="col-sm-2 H100 scroll-y">
-                <div class="panel panel-info">
-                    <div class="panel-heading">Databases</div>
-                </div>
-                <div id="db-list" class="list-group">
-
-                </div>
+        <!-- data list -->
+        <div class="row H100 overflow-hidden flex-child">
+            <div class="col-sm-2 H100 scroll-y nice-scrollbar">
+                <div id="db-list" class="list-group"></div>
             </div>
 
-            <div class="col-sm-2 H100 scroll-y">
-                <div class="panel panel-info">
-                    <div class="panel-heading">Tables</div>
-                </div>
-                <div id="table-list" class="list-group">
-                    
-                </div>
+            <div class="col-sm-2 H100 scroll-y nice-scrollbar">
+                <div id="table-list" class="list-group"></div>
             </div>
 
-            <div id="parent-data-div" class="col-sm-8 H100 scroll-y">
-                <div class="panel panel-info">
-                    <div class="panel-heading">Data</div>
-                    <div class="row padding-twenty">
+            <div id="parent-data-div" class="col-sm-8 H100 scroll-y nice-scrollbar" style="margin-right: 12px;">
+                <div class="list-group">
+                    <div class="padding-2 margin-y-2 shadow">
+                        <div class="row">
                             <div class="col-sm-12">
                                 <div class="form-group">
-                                    <label for="query">Query</label>
-                                    <textarea class="form-control v-fix" id="query"></textarea>
+                                    <textarea class="form-control v-fix" id="query" placeholder="Query here"></textarea>
                                 </div>
                                 <button id="selected-db-info" type="button" onclick="downloadDb()" class="btn btn-info">Download db</button>
                                 <button id="run-query" type="submit" onclick="queryFunction()" class="btn btn-primary pull-right disabled">Run Query</button>
+                            </div>
                         </div>
                     </div>
-
+                    <div id="db-data-div" class="list-group-item" style="margin-top: 30px;">
+                    </div>
                 </div>
             </div>
         </div>
