@@ -32,6 +32,7 @@
     <script src="dataTables.buttons.min.js"></script>
     <script src="dataTables.select.min.js"></script>
     <script src="dataTables.responsive.min.js"></script>
+    <script src="lib/angular.min.1.7.2.js"></script>
 
     <link href="bootstrap.min.css" rel="stylesheet">
     <link href="custom.css" rel="stylesheet">
@@ -107,8 +108,85 @@
             margin-bottom: 12px;
         }
     </style>
+
+
+    <script src="app.js?ver=1"></script>
+
+    <script type="text/javascript">
+        var app = angular.module("dbViewerModule", []);
+        app.service("dbViewerService", function($http){
+            this.getQueryData = function(query){
+                return $http.get("query?query="+encodeURI(query));
+            };
+            this.getDatabaseList = function(){
+                return $http.get("getDbList");
+            };
+            this.getTableList = function(dbname){
+                return $http.get("getTableList?database="+encodeURI(dbname));
+            };
+        });
+        app.controller("dbViewerController", function($scope, dbViewerService){
+            $scope.query = "";
+            $scope.queryResult = null;
+            $scope.dbList = [];
+            $scope.tableList = [];
+
+            //after page load, fetch database, tables
+            dbViewerService.getDatabaseList().then(function(response){
+                console.log(response.data);
+                var result = response.data;
+                if(result.isSuccessful){
+                    //convert data format to more readable format
+                    var filledDbList = [];
+                    for (var i = 0; i < result.rows.length; i++) {
+                        const row = result.rows[i];                        
+                        filledDbList.push({name : row[0], private: row[1] === "true"});
+                    }
+                    filledDbList.sort(function(a, b){ //sort in order
+                        return a.name.localeCompare(b.name);
+                    });
+                    $scope.dbList = filledDbList;
+                }else{
+                    alert(result.errorMessage);
+                }
+            });
+
+            $scope.getTableList = function(db){
+                dbViewerService.getTableList(db.name).then(function(response){
+                    console.log(response.data);
+                    var result = response.data;
+                    if(result.isSuccessful){
+                        result.rows.sort(); //sort in order
+                        $scope.tableList = result.rows;
+                    }else{
+                        alert(result.errorMessage);
+                    }
+                });
+            };
+
+            $scope.getTableData = function(table){
+                console.log(table);
+                $scope.runQuery("select * from " + table + ";");
+            };
+
+            //run query btn click
+            $scope.runQuery = function(query){
+                dbViewerService.getQueryData(query).then(function(response){
+                    //set data to scope (trigger render inflate data)
+                    $scope.queryResult = response.data;
+                    console.log($scope.queryResult);
+
+                    if(!$scope.queryResult.isSuccessful){
+                        //show error
+                        console.error($scope.queryResult.errorMessage);
+                        alert($scope.queryResult.errorMessage);
+                    }
+                });
+            }
+        });
+    </script>
 </head>
-<body>
+<body ng-app="dbViewerModule">
     <!-- Navigation -->
     <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
         <div class="container">
@@ -175,7 +253,7 @@
         <!-- /.container -->
     </nav>
 
-    <div class="H100 flex-container flex-column" style="padding: 65px 12px 12px 12px;">
+    <div class="H100 flex-container flex-column" style="padding: 65px 12px 12px 12px;" ng-controller="dbViewerController">
         <!-- header -->
         <div class="row flex-child">
             <div class="col-sm-2 ">
@@ -192,11 +270,15 @@
         <!-- data list -->
         <div class="row H100 overflow-hidden flex-child">
             <div class="col-sm-2 H100 scroll-y nice-scrollbar">
-                <div id="db-list" class="list-group"></div>
+                <div id="db-list" class="list-group">
+                    <a ng-repeat="db in dbList" href='#' class='list-group-item' ng-click='getTableList(db);'>{{db.name}} <span ng-show="db.private" class="glyphicon glyphicon-lock" aria-hidden="true" style="color:blue"></span></a>
+                </div>
             </div>
 
             <div class="col-sm-2 H100 scroll-y nice-scrollbar">
-                <div id="table-list" class="list-group"></div>
+                <div id="table-list" class="list-group">
+                    <a ng-repeat="table in tableList" href='#' class='list-group-item' ng-click='getTableData(table)'>{{table}}</a>
+                </div>
             </div>
 
             <div id="parent-data-div" class="col-sm-8 H100 scroll-y nice-scrollbar" style="margin-right: 12px;">
@@ -205,14 +287,24 @@
                         <div class="row">
                             <div class="col-sm-12">
                                 <div class="form-group">
-                                    <textarea class="form-control v-fix" id="query" placeholder="Query here"></textarea>
+                                    <textarea class="form-control v-fix" id="query" placeholder="Query here" ng-model="query"></textarea>
                                 </div>
                                 <button id="selected-db-info" type="button" onclick="downloadDb()" class="btn btn-info">Download db</button>
-                                <button id="run-query" type="submit" onclick="queryFunction()" class="btn btn-primary pull-right disabled">Run Query</button>
+                                <button id="run-query" type="submit" ng-click="runQuery(query)" class="btn btn-primary pull-right disabled">Run Query</button>
                             </div>
                         </div>
                     </div>
-                    <div id="db-data-div" class="list-group-item" style="margin-top: 30px;">
+                    <div class="list-group-item" style="margin-top: 30px;">
+                        <table class="table table-striped table-bordered table-condensed">
+                            <thead>
+                                <tr><th ng-repeat="column in queryResult.tableInfos">{{column.title}}</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="row in queryResult.rows">
+                                    <td ng-repeat="columnVal in row">{{columnVal.value}}</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -222,6 +314,5 @@
 
     </div>
 
-    <script src="app.js"></script>
 </body>
 </html>

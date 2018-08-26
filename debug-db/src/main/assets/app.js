@@ -1,10 +1,6 @@
 $( document ).ready(function() {
-    getDBList();
-    $("#query").keypress(function(e){
-        if(e.which == 13) {
-            queryFunction();
-        }
-    });
+    //getDBList();
+ 
     //update currently selected database
     $( document ).on( "click", "#db-list .list-group-item", function() {
         $("#db-list .list-group-item").each(function() {
@@ -124,135 +120,137 @@ function openDatabaseAndGetTableList(db) {
 }
 
 function inflateData(result){
+    //handle error message
+    if(result.isSuccessful){
+        if(!result.isSelectQuery){
+            showSuccessInfo("Query Executed Successfully");
+        }else{
+            _inflateData(result);
+        }
+     }else{
+        if(!result.isSelectQuery){
+            showErrorInfo("Query Execution Failed");
+        }else {
+            showErrorInfo("Some Error Occurred");
+        }
+     }
+}
+
+function _inflateData(result){
     console.log(result);
 
-   if(result.isSuccessful){
+    var columnHeader = result.tableInfos;
 
-      if(!result.isSelectQuery){
-         showSuccessInfo("Query Executed Successfully");
-         return;
+    // set function to return cell data for different usages like set, display, filter, search etc..
+    for(var i = 0; i < columnHeader.length; i++) {
+      columnHeader[i]['targets'] = i;
+      columnHeader[i]['data'] = function(row, type, val, meta) {
+          var dataType = row[meta.col].dataType;
+          if (type == "sort" && dataType == "boolean") {
+              return row[meta.col].value ? 1 : 0;
+          }
+          return row[meta.col].value;
+      }
+    }
+    var columnData = result.rows;
+     var tableId = "#db-data";
+      if ($.fn.DataTable.isDataTable(tableId) ) {
+        $(tableId).DataTable().destroy();
       }
 
-      var columnHeader = result.tableInfos;
+     $("#db-data-div").empty().append('<table class="display nowrap" cellpadding="0" border="0" cellspacing="0" width="100%" class="table table-striped table-bordered display" id="db-data"></table>');
 
-      // set function to return cell data for different usages like set, display, filter, search etc..
-      for(var i = 0; i < columnHeader.length; i++) {
-        columnHeader[i]['targets'] = i;
-        columnHeader[i]['data'] = function(row, type, val, meta) {
-            var dataType = row[meta.col].dataType;
-            if (type == "sort" && dataType == "boolean") {
-                return row[meta.col].value ? 1 : 0;
-            }
-            return row[meta.col].value;
-        }
-      }
-      var columnData = result.rows;
-       var tableId = "#db-data";
-        if ($.fn.DataTable.isDataTable(tableId) ) {
-          $(tableId).DataTable().destroy();
-        }
+     var availableButtons;
+     if (result.isEditable) {
+          availableButtons = [
+              {
+                  text : 'Add',
+                  name : 'add' // don not change name
+              },
+              {
+                  extend: 'selected', // Bind to Selected row
+                  text: 'Edit',
+                  name: 'edit'        // do not change name
+              },
+              {
+                  extend: 'selected',
+                  text: 'Delete',
+                  name: 'delete'
+              }
+          ];
+     } else {
+          availableButtons = [];
+     }
 
-       $("#db-data-div").empty().append('<table class="display nowrap" cellpadding="0" border="0" cellspacing="0" width="100%" class="table table-striped table-bordered display" id="db-data"></table>');
+     $(tableId).dataTable({
+         "data": columnData,
+         "columnDefs": columnHeader,
+         'bPaginate': true,
+         'searching': true,
+         'bFilter': true,
+         'bInfo': true,
+         "bSort" : true,
+         "scrollX": true,
+         "iDisplayLength": 10,
+         "dom": "Bfrtip",
+          select: 'single',
+          altEditor: true,     // Enable altEditor
+          buttons: availableButtons
+     })
 
-       var availableButtons;
-       if (result.isEditable) {
-            availableButtons = [
-                {
-                    text : 'Add',
-                    name : 'add' // don not change name
-                },
-                {
-                    extend: 'selected', // Bind to Selected row
-                    text: 'Edit',
-                    name: 'edit'        // do not change name
-                },
-                {
-                    extend: 'selected',
-                    text: 'Delete',
-                    name: 'delete'
-                }
-            ];
-       } else {
-            availableButtons = [];
-       }
-
-       $(tableId).dataTable({
-           "data": columnData,
-           "columnDefs": columnHeader,
-           'bPaginate': true,
-           'searching': true,
-           'bFilter': true,
-           'bInfo': true,
-           "bSort" : true,
-           "scrollX": true,
-           "iDisplayLength": 10,
-           "dom": "Bfrtip",
-            select: 'single',
-            altEditor: true,     // Enable altEditor
-            buttons: availableButtons
-       })
-
-       //attach row-updated listener
-       $(tableId).on('update-row.dt', function (e, updatedRowData, callback) {
-            var updatedRowDataArray = JSON.parse(updatedRowData);
-            //add value for each column
-            var data = columnHeader;
-            for(var i = 0; i < data.length; i++) {
-                data[i].value = updatedRowDataArray[i].value;
-                data[i].dataType = updatedRowDataArray[i].dataType;
-            }
-            //send update table data request to server
-            updateTableData(data, callback);
-       });
+     //attach row-updated listener
+     $(tableId).on('update-row.dt', function (e, updatedRowData, callback) {
+          var updatedRowDataArray = JSON.parse(updatedRowData);
+          //add value for each column
+          var data = columnHeader;
+          for(var i = 0; i < data.length; i++) {
+              data[i].value = updatedRowDataArray[i].value;
+              data[i].dataType = updatedRowDataArray[i].dataType;
+          }
+          //send update table data request to server
+          updateTableData(data, callback);
+     });
 
 
-       //attach delete-updated listener
-       $(tableId).on('delete-row.dt', function (e, updatedRowData, callback) {
-            var deleteRowDataArray = JSON.parse(updatedRowData);
+     //attach delete-updated listener
+     $(tableId).on('delete-row.dt', function (e, updatedRowData, callback) {
+          var deleteRowDataArray = JSON.parse(updatedRowData);
 
-            console.log(deleteRowDataArray);
+          console.log(deleteRowDataArray);
 
-            //add value for each column
-            var data = columnHeader;
-            for(var i = 0; i < data.length; i++) {
-                data[i].value = deleteRowDataArray[i].value;
-                data[i].dataType = deleteRowDataArray[i].dataType;
+          //add value for each column
+          var data = columnHeader;
+          for(var i = 0; i < data.length; i++) {
+              data[i].value = deleteRowDataArray[i].value;
+              data[i].dataType = deleteRowDataArray[i].dataType;
 
-            }
+          }
 
-            //send delete table data request to server
-            deleteTableData(data, callback);
-       });
+          //send delete table data request to server
+          deleteTableData(data, callback);
+     });
 
 
 
-       $(tableId).on('add-row.dt', function (e, updatedRowData, callback) {
-                   var deleteRowDataArray = JSON.parse(updatedRowData);
+     $(tableId).on('add-row.dt', function (e, updatedRowData, callback) {
+                 var deleteRowDataArray = JSON.parse(updatedRowData);
 
-                   console.log(deleteRowDataArray);
+                 console.log(deleteRowDataArray);
 
-                   //add value for each column
-                   var data = columnHeader;
-                   for(var i = 0; i < data.length; i++) {
-                       data[i].value = deleteRowDataArray[i].value;
-                       data[i].dataType = deleteRowDataArray[i].dataType;
-                   }
+                 //add value for each column
+                 var data = columnHeader;
+                 for(var i = 0; i < data.length; i++) {
+                     data[i].value = deleteRowDataArray[i].value;
+                     data[i].dataType = deleteRowDataArray[i].dataType;
+                 }
 
-                   //send delete table data request to server
-                   addTableData(data, callback);
-              });
+                 //send delete table data request to server
+                 addTableData(data, callback);
+            });
 
-       // hack to fix alignment issue when scrollX is enabled
-       $(".dataTables_scrollHeadInner").css({"width":"100%"});
-       $(".table ").css({"width":"100%"});
-   }else{
-      if(!result.isSelectQuery){
-         showErrorInfo("Query Execution Failed");
-      }else {
-         showErrorInfo("Some Error Occurred");
-      }
-   }
-
+     // hack to fix alignment issue when scrollX is enabled
+     $(".dataTables_scrollHeadInner").css({"width":"100%"});
+     $(".table ").css({"width":"100%"});
 }
 
 //send update database request to server
@@ -372,6 +370,8 @@ function addTableData(deleteData, callback) {
         }
     });
 }
+
+
 
 function showSuccessInfo(message){
     var snackbarId = "snackbar";

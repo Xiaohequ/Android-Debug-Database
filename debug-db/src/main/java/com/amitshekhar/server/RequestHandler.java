@@ -92,55 +92,66 @@ public class RequestHandler {
             // Output stream that we send the response to
             output = new PrintStream(socket.getOutputStream());
 
-            if (route == null || route.isEmpty()) {
-                route = "index.html";
+            try{
+                byte[] bytes;
+
+                //home page redirect
+                if (route == null || route.isEmpty()) {
+                    route = "index.html";
+                }
+
+                if(isAssets(route)){ //load assets html, js, css
+                    bytes = Utils.loadContent(route, mAssets);
+                }else if (route.startsWith("getDbList")) {
+                    final String response = getDBListResponse();
+                    bytes = response.getBytes();
+                } else if (route.startsWith("getAllDataFromTheTable")) {
+                    final String response = getAllDataFromTheTableResponse(route);
+                    bytes = response.getBytes();
+                } else if (route.startsWith("getTableList")) {
+                    final String response = getTableListResponse(route);
+                    bytes = response.getBytes();
+                } else if (route.startsWith("addTableData")) {
+                    final String response = addTableDataAndGetResponse(route);
+                    bytes = response.getBytes();
+                } else if (route.startsWith("updateTableData")) {
+                    final String response = updateTableDataAndGetResponse(route);
+                    bytes = response.getBytes();
+                } else if (route.startsWith("deleteTableData")) {
+                    final String response = deleteTableDataAndGetResponse(route);
+                    bytes = response.getBytes();
+                } else if (route.startsWith("query")) {
+                    final String response = executeQueryAndGetResponse(route);
+                    bytes = response.getBytes();
+                } else if (route.startsWith("downloadDb")) {
+                    bytes = Utils.getDatabase(mSelectedDatabase, mDatabaseFiles);
+                } else {
+                    throw new IllegalAccessError("Page not found!");
+                }
+
+                // Send out the content.
+                output.println("HTTP/1.0 200 OK");
+                output.println("Content-Type: " + Utils.detectMimeType(route));
+
+                //send db file
+                if (route.startsWith("downloadDb")) {
+                    output.println("Content-Disposition: attachment; filename=" + mSelectedDatabase);
+                } else {
+                    output.println("Content-Length: " + bytes.length);
+                }
+
+                output.println();
+
+                //write page content
+                output.write(bytes);
+
+            }catch (IllegalAccessError e){
+                output.println("HTTP/1.0 404 " + e.getMessage());
+            }catch (Exception e){
+                output.println("HTTP/1.0 500 Internal Server Error");
+                e.printStackTrace();
             }
-
-            byte[] bytes;
-
-            if (route.startsWith("getDbList")) {
-                final String response = getDBListResponse();
-                bytes = response.getBytes();
-            } else if (route.startsWith("getAllDataFromTheTable")) {
-                final String response = getAllDataFromTheTableResponse(route);
-                bytes = response.getBytes();
-            } else if (route.startsWith("getTableList")) {
-                final String response = getTableListResponse(route);
-                bytes = response.getBytes();
-            } else if (route.startsWith("addTableData")) {
-                final String response = addTableDataAndGetResponse(route);
-                bytes = response.getBytes();
-            } else if (route.startsWith("updateTableData")) {
-                final String response = updateTableDataAndGetResponse(route);
-                bytes = response.getBytes();
-            } else if (route.startsWith("deleteTableData")) {
-                final String response = deleteTableDataAndGetResponse(route);
-                bytes = response.getBytes();
-            } else if (route.startsWith("query")) {
-                final String response = executeQueryAndGetResponse(route);
-                bytes = response.getBytes();
-            } else if (route.startsWith("downloadDb")) {
-                bytes = Utils.getDatabase(mSelectedDatabase, mDatabaseFiles);
-            } else {
-                bytes = Utils.loadContent(route, mAssets);
-            }
-
-            if (null == bytes) {
-                writeServerError(output);
-                return;
-            }
-
-            // Send out the content.
-            output.println("HTTP/1.0 200 OK");
-            output.println("Content-Type: " + Utils.detectMimeType(route));
-
-            if (route.startsWith("downloadDb")) {
-                output.println("Content-Disposition: attachment; filename=" + mSelectedDatabase);
-            } else {
-                output.println("Content-Length: " + bytes.length);
-            }
-            output.println();
-            output.write(bytes);
+            //send / close pipe
             output.flush();
         } finally {
             try {
@@ -154,6 +165,10 @@ public class RequestHandler {
                 e.printStackTrace();
             }
         }
+    }
+
+    private boolean isAssets(String route){
+        return route.endsWith(".html") || route.endsWith(".js") || route.endsWith(".css") || route.endsWith(".ico") || route.endsWith(".ttf");
     }
 
     public void setCustomDatabaseFiles(HashMap<String, Pair<File, String>> customDatabaseFiles){
