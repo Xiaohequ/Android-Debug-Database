@@ -21,7 +21,6 @@ package com.amitshekhar.server;
 
 import android.content.Context;
 import android.content.res.AssetManager;
-import net.sqlcipher.database.SQLiteDatabase;
 import android.net.Uri;
 import android.text.TextUtils;
 import android.util.Pair;
@@ -38,6 +37,8 @@ import com.amitshekhar.utils.Utils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+
+import net.sqlcipher.database.SQLiteDatabase;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -222,52 +223,51 @@ public class RequestHandler {
     }
 
     private String executeQueryAndGetResponse(String route) {
-        String query = null;
-        String data = null;
-        String first;
+        Response response = new Response();
         try {
+            //get query form url
+            String query;
             if (route.contains("?query=")) {
-                query = route.substring(route.indexOf("=") + 1, route.length());
-            }
-            try {
-                query = URLDecoder.decode(query, "UTF-8");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+                query = route.substring(route.indexOf("?query=") + 7, route.length()); //extract query from url
+                query = URLDecoder.decode(query, "UTF-8"); //convert to normal string
 
-            if (query != null) {
-                String[] statements = query.split(";");
+                //execute query and get result
+                response = executeQuery(query);
 
-                for (int i=0; i<statements.length; i++) {
-
-                    String aQuery = statements[i].trim();
-                    first = aQuery.split(" ")[0].toLowerCase();
-                    if (first.equals("select") || first.equals("pragma")) {
-                        TableDataResponse response = DatabaseHelper.getTableData(mDatabase, aQuery, null);
-                        data = mGson.toJson(response);
-                        if (!response.isSuccessful) {
-                            break;
-                        }
-                    } else {
-                        TableDataResponse response = DatabaseHelper.exec(mDatabase, aQuery);
-                        data = mGson.toJson(response);
-                        if (!response.isSuccessful) {
-                            break;
-                        }
-                    }
-                }
+                response.isSuccessful = true;
+            }else{
+                throw new IllegalArgumentException("No query");
             }
         } catch (Exception e) {
             e.printStackTrace();
-        }
-
-        if (data == null) {
-            Response response = new Response();
             response.isSuccessful = false;
-            data = mGson.toJson(response);
+            response.errorMessage = e.getMessage();
         }
 
-        return data;
+        return mGson.toJson(response);
+    }
+
+    private Response executeQuery(String query){
+        if(query == null) throw new IllegalArgumentException("query can't be null");
+
+        TableDataResponse response = new TableDataResponse();
+        //can have multiple query separate by ";"
+        String[] statements = query.split(";");
+
+        for (String statement : statements) {
+            String aQuery = statement.trim();
+
+            //execute select query
+            if (aQuery.startsWith("select") || aQuery.startsWith("pragma")) {
+                response = DatabaseHelper.execSelect(mDatabase, aQuery); //we need only the last query response
+            }
+            //execute update & delete query
+            else {
+                mDatabase.execSQL(aQuery); // multiple update
+            }
+        }
+        response.isEditable = false; //query data can not be modify
+        return response;
     }
 
     private String getTableListResponse(String route) {

@@ -363,30 +363,6 @@ public class DatabaseHelper {
         return updateRowResponse;
     }
 
-
-    public static TableDataResponse exec(SQLiteDatabase database, String sql) {
-        TableDataResponse tableDataResponse = new TableDataResponse();
-        tableDataResponse.isSelectQuery = false;
-        try {
-
-            String tableName = getTableName(sql);
-
-            if (!TextUtils.isEmpty(tableName)) {
-                String quotedTableName = getQuotedTableName(tableName);
-                sql = sql.replace(tableName, quotedTableName);
-            }
-
-            database.execSQL(sql);
-        } catch (Exception e) {
-            e.printStackTrace();
-            tableDataResponse.isSuccessful = false;
-            tableDataResponse.errorMessage = e.getMessage();
-            return tableDataResponse;
-        }
-        tableDataResponse.isSuccessful = true;
-        return tableDataResponse;
-    }
-
     private static String getTableName(String selectQuery) {
         // TODO: 24/4/17 Handle JOIN Query
         TableNameParser tableNameParser = new TableNameParser(selectQuery);
@@ -401,4 +377,69 @@ public class DatabaseHelper {
         return null;
     }
 
+    public static TableDataResponse execSelect(SQLiteDatabase db, String selectQuery) {
+        TableDataResponse response = new TableDataResponse();
+        response.isSelectQuery = true;
+
+        //execute query
+        Cursor cursor = db.rawQuery(selectQuery, null);
+        try{
+            //mapping result data
+            cursor.moveToFirst();
+
+            // setting columns names
+            response.tableInfos = new ArrayList<>();
+            for (int i = 0; i < cursor.getColumnCount(); i++) {
+                TableDataResponse.TableInfo tableInfo = new TableDataResponse.TableInfo();
+                tableInfo.title = cursor.getColumnName(i);
+                tableInfo.isPrimary = true;
+                response.tableInfos.add(tableInfo);
+            }
+
+            //get result data
+            int nbRow = cursor.getCount();
+            response.rows = new ArrayList<>(nbRow);
+            if (nbRow > 0) {
+                do {
+                    //mapping columns data
+                    List<TableDataResponse.ColumnData> columns = new ArrayList<>();
+                    for (int i = 0; i < cursor.getColumnCount(); i++) {
+                        columns.add(getColumnData(cursor, i));
+                    }
+                    //add columns to rows list
+                    response.rows.add(columns);
+                    //next row
+                } while (cursor.moveToNext());
+            }
+        }finally {
+            cursor.close();
+        }
+        return response;
+    }
+
+    public static TableDataResponse.ColumnData getColumnData(Cursor cursor, int position){
+        TableDataResponse.ColumnData columnData = new TableDataResponse.ColumnData();
+        switch (cursor.getType(position)) {
+            case Cursor.FIELD_TYPE_BLOB:
+                columnData.dataType = DataType.TEXT;
+                columnData.value = ConverterUtils.blobToString(cursor.getBlob(position));
+                break;
+            case Cursor.FIELD_TYPE_FLOAT:
+                columnData.dataType = DataType.REAL;
+                columnData.value = cursor.getDouble(position);
+                break;
+            case Cursor.FIELD_TYPE_INTEGER:
+                columnData.dataType = DataType.INTEGER;
+                columnData.value = cursor.getLong(position);
+                break;
+            case Cursor.FIELD_TYPE_STRING:
+                columnData.dataType = DataType.TEXT;
+                columnData.value = cursor.getString(position);
+                break;
+            default:
+                columnData.dataType = DataType.TEXT;
+                columnData.value = cursor.getString(position);
+        }
+        return columnData;
+    }
 }

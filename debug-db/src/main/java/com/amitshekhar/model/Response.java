@@ -29,9 +29,8 @@ import java.util.List;
 public class Response {
 
     public List<Object> rows = new ArrayList<>();
-    public List<String> columns = new ArrayList<>();
     public boolean isSuccessful;
-    public String error;
+    public String errorMessage;
     public int dbVersion;
 
     public Response() {

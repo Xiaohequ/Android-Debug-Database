@@ -124,6 +124,7 @@ function openDatabaseAndGetTableList(db) {
 }
 
 function inflateData(result){
+    console.log(result);
 
    if(result.isSuccessful){
 

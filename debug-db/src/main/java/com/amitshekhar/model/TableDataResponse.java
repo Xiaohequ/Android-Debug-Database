@@ -25,12 +25,9 @@ import java.util.List;
  * Created by amitshekhar on 04/02/17.
  */
 
-public class TableDataResponse {
+public class TableDataResponse extends Response{
 
     public List<TableInfo> tableInfos;
-    public boolean isSuccessful;
-    public List<Object> rows;
-    public String errorMessage;
     public boolean isEditable;
     public boolean isSelectQuery;
 
@@ -38,6 +35,7 @@ public class TableDataResponse {
         public String title;
         public boolean isPrimary;
     }
+
     public static class ColumnData {
         public String dataType;
         public Object value;
