@@ -124,6 +124,9 @@
             this.getTableList = function(dbname){
                 return $http.get("getTableList?database="+encodeURI(dbname));
             };
+            this.getTableData = function(table){
+                return $http.get("getAllDataFromTheTable?tableName="+encodeURI(table));
+            };
         });
         app.controller("dbViewerController", function($scope, dbViewerService){
             $scope.query = "";
@@ -151,6 +154,7 @@
                 }
             });
 
+            //database name click
             $scope.getTableList = function(db){
                 dbViewerService.getTableList(db.name).then(function(response){
                     console.log(response.data);
@@ -163,10 +167,20 @@
                     }
                 });
             };
-
+            
+            //table name click
             $scope.getTableData = function(table){
-                console.log(table);
-                $scope.runQuery("select * from " + table + ";");
+                dbViewerService.getTableData(table).then(function(response){
+                    //set data to scope (trigger render inflate data)
+                    $scope.queryResult = response.data;
+                    console.log($scope.queryResult);
+
+                    if(!$scope.queryResult.isSuccessful){
+                        //show error
+                        console.error($scope.queryResult.errorMessage);
+                        alert($scope.queryResult.errorMessage);
+                    }
+                });
             };
 
             //run query btn click

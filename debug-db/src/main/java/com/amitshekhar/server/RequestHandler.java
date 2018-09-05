@@ -175,11 +175,6 @@ public class RequestHandler {
         mCustomDatabaseFiles = customDatabaseFiles;
     }
 
-    private void writeServerError(PrintStream output) {
-        output.println("HTTP/1.0 500 Internal Server Error");
-        output.flush();
-    }
-
     private void openDatabase(String database) {
         closeDatabase();
         File databaseFile = mDatabaseFiles.get(database).first;
