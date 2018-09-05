@@ -100,7 +100,7 @@ public class RequestHandler {
                     route = "index.html";
                 }
 
-                if(isAssets(route)){ //load assets html, js, css
+                if(isAssets(getRouteName(route))){ //load assets html, js, css
                     bytes = Utils.loadContent(route, mAssets);
                 }else if (route.startsWith("getDbList")) {
                     final String response = getDBListResponse();
@@ -169,6 +169,14 @@ public class RequestHandler {
 
     private boolean isAssets(String route){
         return route.endsWith(".html") || route.endsWith(".js") || route.endsWith(".css") || route.endsWith(".ico") || route.endsWith(".ttf");
+    }
+
+    private String getRouteName(String route){
+        int routeParamIndex = route.indexOf("?");
+        if(routeParamIndex > -1){
+            route = route.substring(0, routeParamIndex);
+        }
+        return route;
     }
 
     public void setCustomDatabaseFiles(HashMap<String, Pair<File, String>> customDatabaseFiles){

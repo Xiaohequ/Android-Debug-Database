@@ -129,10 +129,15 @@
             };
         });
         app.controller("dbViewerController", function($scope, dbViewerService){
+            const ctr = this;
             $scope.query = "";
             $scope.queryResult = null;
             $scope.dbList = [];
             $scope.tableList = [];
+            $scope.chooseSharePref = false;
+            ctr.previousSelectedDb = null;
+            ctr.previousSelectedTable = null;
+            
 
             //after page load, fetch database, tables
             dbViewerService.getDatabaseList().then(function(response){
@@ -156,12 +161,24 @@
 
             //database name click
             $scope.getTableList = function(db){
+                //unselect previous db
+                if(ctr.previousSelectedDb) ctr.previousSelectedDb.selected = false;
+                //select current db
+                db.selected = true;
+                ctr.previousSelectedDb = db;
+
                 dbViewerService.getTableList(db.name).then(function(response){
-                    console.log(response.data);
+                    $scope.chooseSharePref = (db.name === "APP_SHARED_PREFERENCES");
+                    
                     var result = response.data;
                     if(result.isSuccessful){
                         result.rows.sort(); //sort in order
-                        $scope.tableList = result.rows;
+                        var tableList = [];
+                        for (var i = 0; i < result.rows.length; i++) {
+                            const tableName = result.rows[i];
+                            tableList.push({"name": tableName, selected: false});
+                        }
+                        $scope.tableList = tableList;
                     }else{
                         alert(result.errorMessage);
                     }
@@ -170,7 +187,13 @@
             
             //table name click
             $scope.getTableData = function(table){
-                dbViewerService.getTableData(table).then(function(response){
+                //unselect previous db
+                if(ctr.previousSelectedTable) ctr.previousSelectedTable.selected = false;
+                //select current db
+                table.selected = true;
+                ctr.previousSelectedTable = table;
+
+                dbViewerService.getTableData(table.name).then(function(response){
                     //set data to scope (trigger render inflate data)
                     $scope.queryResult = response.data;
                     console.log($scope.queryResult);
@@ -196,7 +219,7 @@
                         alert($scope.queryResult.errorMessage);
                     }
                 });
-            }
+            };
         });
     </script>
 </head>
@@ -285,25 +308,25 @@
         <div class="row H100 overflow-hidden flex-child">
             <div class="col-sm-2 H100 scroll-y nice-scrollbar">
                 <div id="db-list" class="list-group">
-                    <a ng-repeat="db in dbList" href='#' class='list-group-item' ng-click='getTableList(db);'>{{db.name}} <span ng-show="db.private" class="glyphicon glyphicon-lock" aria-hidden="true" style="color:blue"></span></a>
+                    <a ng-repeat="db in dbList" href='#' class='list-group-item' ng-class="{'active': db.selected}" ng-click='getTableList(db);'>{{db.name}} <span ng-show="db.private" class="glyphicon glyphicon-lock" aria-hidden="true" style="color:blue"></span></a>
                 </div>
             </div>
 
             <div class="col-sm-2 H100 scroll-y nice-scrollbar">
                 <div id="table-list" class="list-group">
-                    <a ng-repeat="table in tableList" href='#' class='list-group-item' ng-click='getTableData(table)'>{{table}}</a>
+                    <a ng-repeat="table in tableList" href='#' class='list-group-item' ng-class="{'active': table.selected}" ng-click='getTableData(table)'>{{table.name}}</a>
                 </div>
             </div>
 
             <div id="parent-data-div" class="col-sm-8 H100 scroll-y nice-scrollbar" style="margin-right: 12px;">
                 <div class="list-group">
-                    <div class="padding-2 margin-y-2 shadow">
+                    <div class="padding-2 margin-y-2 shadow" ng-show="!chooseSharePref">
                         <div class="row">
                             <div class="col-sm-12">
                                 <div class="form-group">
                                     <textarea class="form-control v-fix" id="query" placeholder="Query here" ng-model="query"></textarea>
                                 </div>
-                                <button id="selected-db-info" type="button" onclick="downloadDb()" class="btn btn-info">Download db</button>
+                                <a href="downloadDb" class="btn btn-info">Download db</a>
                                 <button id="run-query" type="submit" ng-click="runQuery(query)" class="btn btn-primary pull-right disabled">Run Query</button>
                             </div>
                         </div>
